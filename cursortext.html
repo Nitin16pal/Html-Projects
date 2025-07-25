@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech to Text with Live Typing & Cursor Insertion</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #textArea {
+      width: 100%;
+      height: 200px;
+      font-size: 18px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #startBtn {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    #startBtn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Speech to Text with Live Typing & Cursor Insertion</h1>
+  <button id="startBtn">Start Speech Recognition</button>
+  <textarea id="textArea" placeholder="Start speaking..."></textarea>
+
+  <script>
+    // Check if the browser supports SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome.');
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;  // Allows continuous speech recognition
+    recognition.interimResults = true; // Show real-time results
+    recognition.lang = 'en-US'; // Set language to English
+
+    const startBtn = document.getElementById('startBtn');
+    const textArea = document.getElementById('textArea');
+
+    let finalTranscript = ''; // Store the final speech transcript
+
+    startBtn.addEventListener('click', () => {
+      if (recognition) {
+        recognition.start();
+        startBtn.disabled = true;  // Disable the button after starting
+        startBtn.textContent = 'Listening...';
+      }
+    });
+
+    recognition.onresult = function(event) {
+      let interimTranscript = '';  // Temporary storage for interim results
+      let finalTranscriptNew = ''; // Temporary storage for final results
+
+      // Collect interim and final results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscriptNew += result + ' '; // Add the final result
+        } else {
+          interimTranscript += result; // Update interim result (live typing)
+        }
+      }
+
+      // Only append final recognized results to the textarea
+      const cursorPos = textArea.selectionStart;
+      const currentText = textArea.value;
+
+      // Insert final transcript if it's available and not appended before
+      if (finalTranscriptNew !== finalTranscript) {
+        const newText = currentText.slice(0, cursorPos) + finalTranscriptNew + currentText.slice(cursorPos);
+        textArea.value = newText;
+
+        // Update the cursor position after text insertion
+        textArea.selectionStart = textArea.selectionEnd = cursorPos + finalTranscriptNew.length;
+      }
+
+      // Update the live typing (interim results) continuously
+      if (interimTranscript !== '') {
+        const typingText = currentText.slice(0, cursorPos) + interimTranscript + currentText.slice(cursorPos);
+        textArea.value = typingText;
+
+        // Ensure the cursor stays at the end of the interim typing
+        textArea.selectionStart = textArea.selectionEnd = typingText.length;
+      }
+
+      // Store the final transcript so that it doesn't repeat
+      finalTranscript = finalTranscriptNew;
+    };
+
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error:', event.error);
+    };
+
+    recognition.onend = function() {
+      startBtn.disabled = false;  // Enable the button when recognition stops
+      startBtn.textContent = 'Start Speech Recognition';
+    };
+
+  </script>
+
+</body>
+</html>
